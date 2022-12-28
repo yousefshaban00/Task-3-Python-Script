@@ -25,12 +25,17 @@ print("Hello")
 # Configs can be set in Configuration class directly or using helper utility
 config.load_kube_config()
 
+# Create a client for the CoreV1Api API
 v1 = client.CoreV1Api()
+# Create a client for the AppsV1Ap API
 api_apps= client.AppsV1Api()
+# Create a client for the CustomObjectsApi API
 api_metric = client.CustomObjectsApi()
+# Create a client for the NetworkingV1Api API
 api_nw = client.NetworkingV1Api()
 # Create a client for the batch/v1 API
 api_batch = client.BatchV1Api()
+# Create a client for the RbacAuthorizationV1Api API
 rbac_client = client.RbacAuthorizationV1Api()
 ``` 
 
