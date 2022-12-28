@@ -848,7 +848,9 @@ Rule: api_groups=['discovery.k8s.io'], resources=['endpointslices'], verbs=['lis
 
 ```
 
-## Final : Build Dockfile for Docker image to test Health status for cluster
+## Final : Build Dockerfile for python kubernetes Script to test Health status for cluster
+
+A Dockerfile is a text file that contains instructions for building a Docker image. It specifies the base image to use, the dependencies to install, and any additional configuration or commands to run.
 
 **requirements.txt**
 kubernetes
@@ -883,7 +885,7 @@ docker push yousefshaban/kubpython:firsttry
  
  
 ## Run Docker Image to check Health status for Cluster
-
+```python
 PS C:\Allinaz_Task\Task-1-EKS-Terraform> kubectl run yousef --image=yousefshaban/kubpython:2.0.0
 
 PS C:\Allinaz_Task\Task-1-EKS-Terraform> kubectl describe pod yousef 
@@ -966,7 +968,7 @@ IP                      namespace                       Pod name                
 10.0.2.147              kube-system             radio-dev-metrics-server-54666cdb8c-x4qgq               Running
 10.0.2.138              kube-system             tiller-deploy-6679847b75-4nrkw          Pending
 10.0.1.122              nginx-ingress-controller                nginx-ingress-controller-ingress-nginx-controller-f6fd8fbb82lz9         Running  
-
+```
 
 
 
