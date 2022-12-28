@@ -886,7 +886,86 @@ docker push yousefshaban/kubpython:firsttry
 
 PS C:\Allinaz_Task\Task-1-EKS-Terraform> kubectl run yousef --image=yousefshaban/kubpython:2.0.0
 
-
+PS C:\Allinaz_Task\Task-1-EKS-Terraform> kubectl describe pod yousef 
+Name:         yousef
+Namespace:    default
+Priority:     0
+Node:         ip-10-0-1-254.ec2.internal/10.0.1.254
+Start Time:   Wed, 28 Dec 2022 17:34:18 +0100
+Labels:       run=yousef
+Annotations:  kubernetes.io/psp: eks.privileged
+Status:       Pending
+IP:
+IPs:          <none>
+Containers:
+  yousef:
+    Container ID:
+    Image:          yousefshaban/kubpython:2.0.0
+    Image ID:
+    Port:           <none>
+    Host Port:      <none>
+    State:          Waiting
+      Reason:       ContainerCreating
+    Ready:          False
+    Restart Count:  0
+    Environment:    <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-59sbz (ro)
+Conditions:
+  Type              Status
+  Initialized       True
+  Ready             False
+  ContainersReady   False
+Volumes:
+  kube-api-access-59sbz:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    ConfigMapOptional:       <nil>
+    DownwardAPI:             true
+QoS Class:                   BestEffort
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type    Reason     Age   From               Message
+  ----    ------     ----  ----               -------
+  Normal  Scheduled  22s   default-scheduler  Successfully assigned default/yousef to ip-10-0-1-254.ec2.internal
+  Normal  Pulling    22s   kubelet            Pulling image "yousefshaban/kubpython:2.0.0"
+PS C:\Allinaz_Task\Task-1-EKS-Terraform> kubectl logs  yousef        
+Hello
+IP                      namespace                       Pod name                        Status
+10.0.2.167              amazon-cloudwatch               cloudwatch-agent-558q8          Running
+10.0.1.72               amazon-cloudwatch               cloudwatch-agent-tfh4d          Running
+10.0.112.51             amazon-cloudwatch               cloudwatch-agent-x88hj          Running
+10.0.112.54             amazon-cloudwatch               fluent-bit-5nxtq                Running
+10.0.2.176              amazon-cloudwatch               fluent-bit-q854p                Running
+10.0.1.254              amazon-cloudwatch               fluent-bit-qlljx                Running
+10.0.2.243              default         app3-nginx-deployment-cd48c8ffb-8mzc7           Running
+10.0.1.219              default         yousef          Running
+10.0.1.177              interview               hello-world-de-67ccdb96c7-bfpk7         Running
+10.0.2.177              interview               hello-world-es-68b8676bd6-8czl2         Running
+10.0.1.190              interview               hello-world-eu-748db46546-f55sm         Running
+10.0.112.237            interview               hello-world-fr-56b5cd5569-2blxj         Running
+10.0.1.88               istio-ingress           istio-ingress-54464bcb87-4mt2f          Running
+10.0.112.106            istio-system            istiod-7f8c8bb8c8-sb2rr         Running
+10.0.1.254              kube-system             aws-node-bsfh5          Running
+10.0.2.176              kube-system             aws-node-jjl28          Running
+10.0.112.54             kube-system             aws-node-lq97k          Running
+10.0.112.114            kube-system             coredns-79989457d9-9q6d8                Running
+10.0.112.175            kube-system             coredns-79989457d9-jtmlp                Running
+10.0.1.156              kube-system             ebs-csi-controller-69774c68f4-p6svn             Running
+10.0.2.188              kube-system             ebs-csi-controller-69774c68f4-t5dgt             Running
+10.0.2.73               kube-system             ebs-csi-node-4sxqh              Running
+10.0.1.17               kube-system             ebs-csi-node-f4cdz              Running
+10.0.112.166            kube-system             ebs-csi-node-xn7zg              Running
+10.0.112.54             kube-system             kube-proxy-hs7cm                Running
+10.0.1.254              kube-system             kube-proxy-plcp7                Running
+10.0.2.176              kube-system             kube-proxy-r2xrr                Running
+10.0.1.240              kube-system             radio-dev-ca-aws-cluster-autoscaler-68b99987b8-6vzcc            Running
+10.0.2.147              kube-system             radio-dev-metrics-server-54666cdb8c-x4qgq               Running
+10.0.2.138              kube-system             tiller-deploy-6679847b75-4nrkw          Pending
+10.0.1.122              nginx-ingress-controller                nginx-ingress-controller-ingress-nginx-controller-f6fd8fbb82lz9         Running  
 
 
 
