@@ -1,6 +1,6 @@
 # Python Task
 
-## Implement a Python or Golang app / script to perform a periodically health-check for the cluster/apps  i.e usage of the pods (cpu,memory), status of pod/node etc. without using kubectl if possible. 
+### Implement a Python or Golang app / script to perform a periodically health-check for the cluster/apps  i.e usage of the pods (cpu,memory), status of pod/node etc. without using kubectl if possible. 
 
 
 ### Step 00: We need to install python and Kubernetes Python client library
