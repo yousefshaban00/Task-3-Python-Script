@@ -848,8 +848,7 @@ Rule: api_groups=['discovery.k8s.io'], resources=['endpointslices'], verbs=['lis
 
 ```
 
-## Final : Build python Docker Image
-
+## Final : Build Dockfile for Docker image to test Health status for cluster
 
 **requirements.txt**
 kubernetes
@@ -857,37 +856,35 @@ tabulate
 
 **Dockerfile**
 
-```
-FROM python:3.8
 
-# Set the working directory to /app
-WORKDIR /app
-
-# Copy the current directory contents into the container at /app
+```Bash
 COPY . /app
-
-# Install any needed packages specified in requirements.txt
 RUN pip install -r requirements.txt
-
+RUN apt-get update
+RUN curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.24.7/2022-10-31/bin/linux/amd64/kubectl
+RUN chmod +x ./kubectl
+RUN mkdir -p $HOME/bin && cp ./kubectl $HOME/bin/kubectl && export PATH=$PATH:$HOME/bin
+RUN mv kubectl /usr/local/bin/
+RUN kubectl version --short --client
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+RUN unzip awscliv2.zip
+RUN ./aws/install -i /usr/local/aws-cli -b /usr/local/bin
+RUN aws eks update-kubeconfig --name radio-dev-ekstask1 --region us-east-1
+#RUN aws eks update-kubeconfig --name radio-dev-ekstask1 --profile default --region us-east-1
+#aws eks update-kubeconfig --name <cluster-name> --profile <profile-name> --region <region-name>
 
 # Run app.py when the container launches
 CMD ["python", "test.py"]
-
 ```
-
-* build and push Docker image
-```
-docker build -t pythonimage .
+ 
+ docker build -t pythonimage .
 docker tag pythonimage yousefshaban/kubpython:firsttry
 docker push yousefshaban/kubpython:firsttry
-```
+ 
+ 
+## Run Docker Image to check Health status for Cluster
 
-
-
-
-
-
-
+PS C:\Allinaz_Task\Task-1-EKS-Terraform> kubectl run yousef --image=yousefshaban/kubpython:2.0.0
 
 
 
