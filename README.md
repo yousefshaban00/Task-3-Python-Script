@@ -272,7 +272,7 @@ nginx-ingress-controller-ingress-nginx-controller-8484ddcb7lnnm:istio-proxy: doc
 
 
 
-### Step 02.3: We define function to Print the name of each pod that has a non-zero restartCount
+### Step 02.5: We define function to Print the name of each pod that has a non-zero restartCount
 
  
 ```python
