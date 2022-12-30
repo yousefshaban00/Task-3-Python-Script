@@ -16,6 +16,15 @@ pip install tabulate
 
 ### Step 01: We need to import Python client and config from Kubernetes Python client library
 
+
+**Official Python client library for kubernetes - GitHub**
+ - https://github.com/kubernetes-client/python
+ 
+**Documentation**
+All APIs and Models' documentation can be found at the Generated client's README file [link](https://github.com/kubernetes-client/python/blob/master/kubernetes/README.md) 
+
+
+
 ``` 
 from kubernetes import client, config
 import json
