@@ -21,7 +21,7 @@ pip install tabulate
  - https://github.com/kubernetes-client/python
  
 **Documentation**
-All APIs and Models' documentation can be found at the Generated client's README file [link](https://github.com/kubernetes-client/python/blob/master/kubernetes/README.md) 
+- All APIs and Models' documentation can be found at the Generated client's README file [link](https://github.com/kubernetes-client/python/blob/master/kubernetes/README.md) 
 
 
 
