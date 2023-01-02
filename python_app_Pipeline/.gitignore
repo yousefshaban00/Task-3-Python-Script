@@ -1,0 +1,5 @@
+<<<<<<< HEAD
+.terraform/providers/registry.terraform.io/hashicorp/aws/4.48.0/windows_amd64/terraform-provider-aws_v4.48.0_x5.exe
+=======
+/.terraform/providers/registry.terraform.io/hashicorp/aws/4.48.0/windows_amd64/terraform-provider-aws_v4.48.0_x5.exe
+>>>>>>> 0af37cab21e3a007bc3e503fd1536cf02a4aa0b7
