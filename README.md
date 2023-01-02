@@ -984,5 +984,48 @@ IP                      namespace                       Pod name                
 10.0.1.122              nginx-ingress-controller                nginx-ingress-controller-ingress-nginx-controller-f6fd8fbb82lz9         Running  
 ```
 
+## AWS CodePipeline+CodeBuild using Terraform to make automation process for Python Task
+
+we use AWS CodePipeline to make automatically test,build and deploy python app (Cluster health check) as the follwoing steps:
+
+
+### Step 00: We define Terraform Settings and provider `c1-version.tf`
+
+```
+terraform {
+  required_version = ">= 1.0.0"
+   required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "4.48.0"
+     }
+   }
+
+  # Adding Backend as S3 for Remote State Storage
+  backend "s3" {
+    bucket = "aws-eks-terraform"
+    key    = "dev/py-pipelinee/terraform.tfstate"
+    region = "us-east-1" 
+
+    # For State Locking
+    dynamodb_table = "py-pipeline"    
+  }    
+
+
+
+}
+
+provider "aws" {
+  region = var.aws_region
+}
+
+```
+
+### Step 02: We define Terraform Settings and provider
+
+
+
+
+
 
 
