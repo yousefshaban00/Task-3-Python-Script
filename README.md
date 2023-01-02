@@ -1046,6 +1046,67 @@ resource "aws_codestarconnections_connection" "github" {
 
 
 ```
+resource "aws_iam_role" "containerAppBuildProjectRole" {
+  name = "containerAppBuildProjectRole"
+
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "codebuild.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+}
+
+# add managed Polcy
+# IAM full access
+
+resource "aws_iam_policy_attachment" "IAMFullAccess" {
+  name       = "IAMFullAccess"
+  policy_arn = "arn:aws:iam::aws:policy/IAMFullAccess"
+  roles      = [aws_iam_role.containerAppBuildProjectRole.name]
+}
+
+# S3 Full access
+resource "aws_iam_policy_attachment" "AmazonS3FullAccess" {
+  name       = "AmazonS3FullAccess"
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+  roles      = [aws_iam_role.containerAppBuildProjectRole.name]
+}
+
+# DynamoDB full access
+resource "aws_iam_policy_attachment" "AmazonDynamoDBFullAccess" {
+  name       = "AmazonDynamoDBFullAccess"
+  policy_arn = "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess"
+  roles      = [aws_iam_role.containerAppBuildProjectRole.name]
+}
+
+
+resource "aws_iam_role" "apps_codepipeline_role" {
+  name = "apps-code-pipeline-role"
+
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "codepipeline.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+}
 
 ```
 
