@@ -1,9 +1,9 @@
 # Python Task
 
-##Implement a Python or Golang app / script to perform a periodically health-check for the cluster/apps  i.e usage of the pods (cpu,memory), status of pod/node etc. without using kubectl if possible. 
+**Implement a Python or Golang app / script to perform a periodically health-check for the cluster/apps  i.e usage of the pods (cpu,memory), status of pod/node etc. without using kubectl if possible.**
 
 
-### Step 00: We need to iinstall python and Kubernetes Python client library
+### Step 00: We need to install python and Kubernetes Python client library
 
 install python
 
@@ -16,6 +16,15 @@ pip install tabulate
 
 ### Step 01: We need to import Python client and config from Kubernetes Python client library
 
+
+**Official Python client library for kubernetes - GitHub**
+ - https://github.com/kubernetes-client/python
+ 
+**Documentation**
+- All APIs and Models' documentation can be found at the Generated client's README file [link](https://github.com/kubernetes-client/python/blob/master/kubernetes/README.md) 
+
+
+
 ``` 
 from kubernetes import client, config
 import json
@@ -25,12 +34,17 @@ print("Hello")
 # Configs can be set in Configuration class directly or using helper utility
 config.load_kube_config()
 
+# Create a client for the CoreV1Api API
 v1 = client.CoreV1Api()
+# Create a client for the AppsV1Ap API
 api_apps= client.AppsV1Api()
+# Create a client for the CustomObjectsApi API
 api_metric = client.CustomObjectsApi()
+# Create a client for the NetworkingV1Api API
 api_nw = client.NetworkingV1Api()
 # Create a client for the batch/v1 API
 api_batch = client.BatchV1Api()
+# Create a client for the RbacAuthorizationV1Api API
 rbac_client = client.RbacAuthorizationV1Api()
 ``` 
 
@@ -267,7 +281,7 @@ nginx-ingress-controller-ingress-nginx-controller-8484ddcb7lnnm:istio-proxy: doc
 
 
 
-### Step 02.3: We define function to Print the name of each pod that has a non-zero restartCount
+### Step 02.5: We define function to Print the name of each pod that has a non-zero restartCount
 
  
 ```python
@@ -843,8 +857,9 @@ Rule: api_groups=['discovery.k8s.io'], resources=['endpointslices'], verbs=['lis
 
 ```
 
-## Final : Build python Docker Image
+## Final : Build Dockerfile for python kubernetes Script to test Health status for cluster
 
+A Dockerfile is a text file that contains instructions for building a Docker image. It specifies the base image to use, the dependencies to install, and any additional configuration or commands to run.
 
 **requirements.txt**
 kubernetes
@@ -852,34 +867,653 @@ tabulate
 
 **Dockerfile**
 
-```
-FROM python:3.8
 
-# Set the working directory to /app
-WORKDIR /app
-
-# Copy the current directory contents into the container at /app
+```Bash
 COPY . /app
-
-# Install any needed packages specified in requirements.txt
 RUN pip install -r requirements.txt
+RUN apt-get update
+RUN curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.24.7/2022-10-31/bin/linux/amd64/kubectl
+RUN chmod +x ./kubectl
+RUN mkdir -p $HOME/bin && cp ./kubectl $HOME/bin/kubectl && export PATH=$PATH:$HOME/bin
+RUN mv kubectl /usr/local/bin/
+RUN kubectl version --short --client
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+RUN unzip awscliv2.zip
+RUN ./aws/install -i /usr/local/aws-cli -b /usr/local/bin
+RUN region=$(aws ec2 describe-availability-zones --output text --query 'AvailabilityZones[0].[RegionName]')
+RUN echo $region
+RUN cluster_name = $(aws eks list-clusters --query 'clusters[0]' --output text)
+RUN echo $cluster_name
+RUN aws eks update-kubeconfig --name $cluster_name --region $region
 
-
+#RUN aws eks update-kubeconfig --name radio-dev-ekstask1 --profile default --region us-east-1
+#aws eks update-kubeconfig --name <cluster-name> --profile <profile-name> --region <region-name>
+# ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
 # Run app.py when the container launches
 CMD ["python", "test.py"]
-
 ```
-
-* build and push Docker image
-```
-docker build -t pythonimage .
+ 
+ docker build -t pythonimage .
 docker tag pythonimage yousefshaban/kubpython:firsttry
 docker push yousefshaban/kubpython:firsttry
+ 
+ 
+## Run Docker Image to check Health status for Cluster
+```python
+PS C:\Allinaz_Task\Task-1-EKS-Terraform> kubectl run yousef --image=yousefshaban/kubpython:2.0.0
+
+PS C:\Allinaz_Task\Task-1-EKS-Terraform> kubectl describe pod yousef 
+Name:         yousef
+Namespace:    default
+Priority:     0
+Node:         ip-10-0-1-254.ec2.internal/10.0.1.254
+Start Time:   Wed, 28 Dec 2022 17:34:18 +0100
+Labels:       run=yousef
+Annotations:  kubernetes.io/psp: eks.privileged
+Status:       Pending
+IP:
+IPs:          <none>
+Containers:
+  yousef:
+    Container ID:
+    Image:          yousefshaban/kubpython:2.0.0
+    Image ID:
+    Port:           <none>
+    Host Port:      <none>
+    State:          Waiting
+      Reason:       ContainerCreating
+    Ready:          False
+    Restart Count:  0
+    Environment:    <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-59sbz (ro)
+Conditions:
+  Type              Status
+  Initialized       True
+  Ready             False
+  ContainersReady   False
+Volumes:
+  kube-api-access-59sbz:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    ConfigMapOptional:       <nil>
+    DownwardAPI:             true
+QoS Class:                   BestEffort
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type    Reason     Age   From               Message
+  ----    ------     ----  ----               -------
+  Normal  Scheduled  22s   default-scheduler  Successfully assigned default/yousef to ip-10-0-1-254.ec2.internal
+  Normal  Pulling    22s   kubelet            Pulling image "yousefshaban/kubpython:2.0.0"
+PS C:\Allinaz_Task\Task-1-EKS-Terraform> kubectl logs  yousef        
+Hello
+IP                      namespace                       Pod name                        Status
+10.0.2.167              amazon-cloudwatch               cloudwatch-agent-558q8          Running
+10.0.1.72               amazon-cloudwatch               cloudwatch-agent-tfh4d          Running
+10.0.112.51             amazon-cloudwatch               cloudwatch-agent-x88hj          Running
+10.0.112.54             amazon-cloudwatch               fluent-bit-5nxtq                Running
+10.0.2.176              amazon-cloudwatch               fluent-bit-q854p                Running
+10.0.1.254              amazon-cloudwatch               fluent-bit-qlljx                Running
+10.0.2.243              default         app3-nginx-deployment-cd48c8ffb-8mzc7           Running
+10.0.1.219              default         yousef          Running
+10.0.1.177              interview               hello-world-de-67ccdb96c7-bfpk7         Running
+10.0.2.177              interview               hello-world-es-68b8676bd6-8czl2         Running
+10.0.1.190              interview               hello-world-eu-748db46546-f55sm         Running
+10.0.112.237            interview               hello-world-fr-56b5cd5569-2blxj         Running
+10.0.1.88               istio-ingress           istio-ingress-54464bcb87-4mt2f          Running
+10.0.112.106            istio-system            istiod-7f8c8bb8c8-sb2rr         Running
+10.0.1.254              kube-system             aws-node-bsfh5          Running
+10.0.2.176              kube-system             aws-node-jjl28          Running
+10.0.112.54             kube-system             aws-node-lq97k          Running
+10.0.112.114            kube-system             coredns-79989457d9-9q6d8                Running
+10.0.112.175            kube-system             coredns-79989457d9-jtmlp                Running
+10.0.1.156              kube-system             ebs-csi-controller-69774c68f4-p6svn             Running
+10.0.2.188              kube-system             ebs-csi-controller-69774c68f4-t5dgt             Running
+10.0.2.73               kube-system             ebs-csi-node-4sxqh              Running
+10.0.1.17               kube-system             ebs-csi-node-f4cdz              Running
+10.0.112.166            kube-system             ebs-csi-node-xn7zg              Running
+10.0.112.54             kube-system             kube-proxy-hs7cm                Running
+10.0.1.254              kube-system             kube-proxy-plcp7                Running
+10.0.2.176              kube-system             kube-proxy-r2xrr                Running
+10.0.1.240              kube-system             radio-dev-ca-aws-cluster-autoscaler-68b99987b8-6vzcc            Running
+10.0.2.147              kube-system             radio-dev-metrics-server-54666cdb8c-x4qgq               Running
+10.0.2.138              kube-system             tiller-deploy-6679847b75-4nrkw          Pending
+10.0.1.122              nginx-ingress-controller                nginx-ingress-controller-ingress-nginx-controller-f6fd8fbb82lz9         Running  
+```
+
+## AWS CodePipeline+CodeBuild using Terraform to make automation process for Python Task
+
+**we use AWS CodePipeline to make automatically test,build and deploy python app (Cluster health check) as the follwoing steps:**
+
+
+#### Step 00: We define Terraform Settings and provider `c1-version.tf`
+
+```
+terraform {
+  required_version = ">= 1.0.0"
+   required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "4.48.0"
+     }
+   }
+
+  # Adding Backend as S3 for Remote State Storage
+  backend "s3" {
+    bucket = "aws-eks-terraform"
+    key    = "dev/py-pipelinee/terraform.tfstate"
+    region = "us-east-1" 
+
+    # For State Locking
+    dynamodb_table = "py-pipeline"    
+  }    
+
+
+
+}
+
+provider "aws" {
+  region = var.aws_region
+}
+
+```
+
+#### Step 01: We define Github Source as Connection for Pipeline `c2-source.tf`
+
+
+```
+
+resource "aws_codestarconnections_connection" "github" {
+  name = "github-connection"
+  provider_type = "GitHub"
+  #provider_version = "2"
+  #host_arn = "arn:aws:codestar-connections:us-east-1:962490649366:connection/efs-1"
+ # host_arn = aws_codestar_connections_host.github.arn
+  #access_token_arn = "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:GITHUB_SECRET_NAME"
+ # access_token_arn = "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:GITHUB_SECRET_NAME"
+
+}
+
+
+
+```
+
+
+#### Step 02: We define IAM roles and Polices for AWS CodePipeline and CodeBuild `c3-iam-role-policy.tf`
+
+
+```
+
+```
+
+*  **buildspec  = "${file("buildspec_python.yml")}"**
+
+```
+version: 0.2
+
+#env:
+  #variables:
+     # key: "There are no variables"
+  #parameter-store:
+     # key: "There are no variables"
+
+phases:
+  install:
+    #If you use the Ubuntu standard image 2.0 or later, you must specify runtime-versions.
+    #If you specify runtime-versions and use an image other than Ubuntu standard image 2.0, the build fails.
+    runtime-versions:
+       python: 3.10
+
+  pre_build:
+    commands:
+     - apt-get update
+     - pip install -r python_app_Pipeline/Dockerfile_py_Pipeline/requirements.txt
+     - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+     - unzip awscliv2.zip
+     - sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
+   #  - REGION=us-east-1
+     - REGION=$(aws ec2 describe-availability-zones --output text --query 'AvailabilityZones[0].[RegionName]')
+
+     - AWS_ACCOUNTID=962490649366
+     #- COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1–7)
+    # - IMAGE_TAG=${COMMIT_HASH:=latest}
+   #  - EKS_NAME= $(aws eks list-clusters --query 'clusters[0]' --output text)
+     - EKS_NAME=radio-dev-ekstask1
+     -  curl -o aws-iam-authenticator https://amazon-eks.s3.us-east-1.amazonaws.com/1.21.2/2021-07-05/bin/linux/amd64/aws-iam-authenticator
+     - chmod +x ./aws-iam-authenticator
+     - mkdir -p ~/bin && cp ./aws-iam-authenticator ~/bin/aws-iam-authenticator && export PATH=~/bin:$PATH
+     - curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.24.7/2022-10-31/bin/linux/amd64/kubectl
+     - chmod +x kubectl
+     - mv ./kubectl /usr/local/bin/kubectl
+     - echo Update kubeconfig…
+     - aws eks update-kubeconfig --name ${EKS_NAME} --region ${REGION}
+     - kubectl version --short --client
+   #  - cat ~/.aws/config
+  #  - cat ~/.aws/credentials
+  #   - cat ~/.kube/config
+     - aws sts get-caller-identity
+   #  - mkdir -p ~/.aws/
+   #  - echo "[profile codebuild]" >> ~/.aws/config
+  #   - echo "role_arn = arn:aws:iam::$AWS_ACCOUNT_ID:role/containerAppBuildProjectRole" >> ~/.aws/config
+   #  - echo "region = us-east-1"
+   #  - echo "output = json"
+   #  - cat ~/.aws/config
+  #  -  aws eks update-kubeconfig --name ${EKS_NAME} --region ${REGION} --role-arn arn:aws:iam::962490649366:role/containerAppBuildProjectRole
+    # -  aws eks update-kubeconfig --name ${EKS_NAME} --region ${REGION} 
+     - kubectl get pod
+     - kubectl get svc
+     - echo $IMAGE_REPO_NAME
+     - echo $IMAGE_TAG
+     #- echo $PASS
+     # define PASS as AWS SSM Parameter Store 
+     - password=$(aws ssm get-parameters --region us-east-1 --names PASS --with-decryption --query Parameters[0].Value)
+     - password=`echo $password | sed -e 's/^"//' -e 's/"$//'`
+     - python python_app_Pipeline/test.py
+
+     #- $IMAGE_REPO_NAME=yousefshaban/my-python-app
+    # - $IMAGE_TAG=latest
+
+  build:
+    commands:
+      - docker login --username yousefshaban --password ${password}
+      - echo Build started on `date`
+      - echo Building the Docker image...          
+      - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG python_app_Pipeline/Dockerfile_py_Pipeline
+      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $IMAGE_REPO_NAME:$IMAGE_TAG
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker image...
+      - docker push $IMAGE_REPO_NAME:$IMAGE_TAG
+
+
 ```
 
 
 
 
+
+#### Step 03: We define AWS CodeBuild Projects for Pipeline `c4-build.tf`
+
+
+```
+# aws codebuild - First - python and auth with K8s  ************************************
+
+resource "aws_codebuild_project" "containerAppBuild" {
+  badge_enabled  = false
+  build_timeout  = 60
+  name           = "python_app"
+
+
+
+  queued_timeout = 480
+  service_role   = aws_iam_role.containerAppBuildProjectRole.arn
+  tags = {
+    Environment = var.env
+  }
+
+  artifacts {
+    encryption_disabled = false
+    # name                   = "container-app-code-${var.env}"
+    # override_artifact_name = false
+    packaging = "NONE"
+    type      = "CODEPIPELINE"
+  }
+
+
+
+  environment {
+    compute_type                = "BUILD_GENERAL1_SMALL"
+    image                       = "aws/codebuild/standard:6.0"
+    image_pull_credentials_type = "CODEBUILD"
+    privileged_mode             = true
+    type                        = "LINUX_CONTAINER"
+    environment_variable {
+              name  = "IMAGE_REPO_NAME"
+              type  = "PLAINTEXT"
+              value = "yousefshaban/my-python-app"
+    }
+
+    environment_variable {
+              name  = "IMAGE_TAG"
+              type  = "PLAINTEXT"
+              value = "latest"
+    }
+
+
+
+  }
+
+
+  logs_config {
+    cloudwatch_logs {
+      status = "ENABLED"
+    }
+
+    s3_logs {
+      encryption_disabled = false
+      status              = "DISABLED"
+    }
+  }
+
+# how we can dd more source for aws_codebuild_project
+
+  source {
+
+    buildspec  = "${file("buildspec_python.yml")}"
+    git_clone_depth     = 0
+    insecure_ssl        = false
+    report_build_status = false
+  #  type                = "CODEPIPELINE"
+    type                = "CODEPIPELINE"
+  }
+}
+
+
+
+```
+
+
+
+#### Step 04: We define AWS CodePipeline for all Stages of Source and Builds `c5-pipeline.tf`
+
+
+```
+resource "aws_s3_bucket" "cicd_bucket" {
+  bucket = "my-artifact-store-i"
+#  acl    = "private"
+}
+
+resource "aws_codepipeline" "node_app_pipeline" {
+  name     = "python-app-pipeline"
+  role_arn = aws_iam_role.apps_codepipeline_role.arn
+  tags = {
+    Environment = var.env
+  }
+  artifact_store {
+    location = aws_s3_bucket.cicd_bucket.bucket
+    type     = "S3"
+  }
+
+
+  stage {
+    name = "Source"
+
+    action {
+      category = "Source"
+      input_artifacts = []
+      name            = "Source"
+      output_artifacts = [
+        "SourceArtifact",
+      ]
+      #owner     = "ThirdParty"
+      owner     = "AWS"
+      provider  = "CodeStarSourceConnection"     
+      #provider  = "GitHub"
+      run_order = 1
+      version   = "1"   # ??? 1 or 2 
+      configuration = {
+        ConnectionArn    = aws_codestarconnections_connection.github.arn
+        FullRepositoryId = var.python_project_repository_name
+        BranchName       = var.python_project_repository_branch
+      }
+
+
+
+    }
+  }
+
+
+
+
+
+  stage {
+  
+    name = "Build-python"
+
+    action {
+       name = "Build-python"
+      category = "Build"
+         run_order = 2
+      # region ??
+      configuration = {
+        "EnvironmentVariables" = jsonencode(
+          [
+            {
+              name  = "environment"
+              type  = "PLAINTEXT"
+              value = var.env
+            },
+            {
+              name  = "AWS_DEFAULT_REGION"
+              type  = "PLAINTEXT"
+              value = var.aws_region
+            },
+            #   {
+            #   name  = "PASS" >>> you can add on parameter store and use it on Buildspec.yml
+            #   - password=$(aws ssm get-parameters --region us-east-1 --names PASS --with-decryption --query Parameters[0].Value)
+            # - password=`echo $password | sed -e 's/^"//' -e 's/"$//'`
+            #   type  = "PARAMETER_STORE"
+            #   value = "ACCOUNT_ID"
+  
+ 
+          ]
+        )
+        "ProjectName" = aws_codebuild_project.containerAppBuild.name
+      }
+      input_artifacts = [
+        "SourceArtifact",
+      ]
+     
+      output_artifacts = [
+        "BuildArtifact",
+      ]
+      owner     = "AWS"
+      provider  = "CodeBuild"
+   #   run_order = 1
+      version   = "1"
+    }
+  }
+
+
+
+```
+
+
+
+#### Step 05: We define Outputs `c6-outputs.tf`
+
+
+```
+output "code_build_project" {
+  value = aws_codebuild_project.containerAppBuild.arn
+}
+output "node_app_codepipeline_project" {
+  value = aws_codepipeline.node_app_pipeline.arn
+}
+
+
+
+```
+
+
+
+#### Step 06: We define Variables `c7-variables.tf`
+
+
+```
+
+variable "aws_region" {
+  description = "AWS region to launch servers."
+  default     = "us-east-1"
+}
+variable "env" {
+  description = "Targeted Depolyment environment"
+  default     = "dev"
+}
+variable "python_project_repository_name" {
+  description = "Nodejs Project Repository name to connect to"
+  default     = "yousefshaban00/pipeline01"
+}
+variable "python_project_repository_branch" {
+  description = "Nodejs Project Repository branch to connect to"
+  default     = "main"
+}
+
+
+variable "artifacts_bucket_name" {
+  description = "S3 Bucket for storing artifacts"
+  default     = "python-app"
+}
+
+
+```
+
+
+
+#### Outputs and Verify 
+
+
+![Alt text](python_app_Pipeline/Capture1.PNG)
+![Alt text](python_app_Pipeline/Capture2.PNG)
+```
+
+[Container] 2023/01/02 17:24:53 Running command echo $IMAGE_REPO_NAME
+yousefshaban/my-python-app
+
+[Container] 2023/01/02 17:24:53 Running command echo $IMAGE_TAG
+latest
+
+[Container] 2023/01/02 17:24:53 Running command password=$(aws ssm get-parameters --region us-east-1 --names PASS --with-decryption --query Parameters[0].Value)
+
+[Container] 2023/01/02 17:24:53 Running command password=`echo $password | sed -e 's/^"//' -e 's/"$//'`
+
+[Container] 2023/01/02 17:24:53 Running command python python_app_Pipeline/test.py
+Hello
+IP          namespace           Pod name            Status
+10.0.2.167      amazon-cloudwatch       cloudwatch-agent-558q8      Running
+10.0.1.72       amazon-cloudwatch       cloudwatch-agent-tfh4d      Running
+10.0.111.230        amazon-cloudwatch       cloudwatch-agent-wr2lc      Running
+10.0.112.51     amazon-cloudwatch       cloudwatch-agent-x88hj      Running
+10.0.112.54     amazon-cloudwatch       fluent-bit-5nxtq        Running
+10.0.111.178        amazon-cloudwatch       fluent-bit-psk2n        Running
+10.0.2.176      amazon-cloudwatch       fluent-bit-q854p        Running
+10.0.1.254      amazon-cloudwatch       fluent-bit-qlljx        Running
+10.0.112.244        bookinfo        details-v1-7d4d9d5fcb-2dd7d     Running
+10.0.2.159      bookinfo        productpage-v1-66756cddfd-sqnc7     Running
+10.0.1.251      bookinfo        ratings-v1-85cc46b6d4-cl9cs     Running
+10.0.2.70       bookinfo        reviews-v1-777df99c6d-wdzt9     Running
+10.0.112.184        bookinfo        reviews-v2-cdd8fb88b-q4dl7      Running
+10.0.1.235      bookinfo        reviews-v3-58b6479b-xx9fx       Running
+10.0.112.59     default     adservice-798c5794b9-hvs9k      Running
+10.0.2.120      default     app3-nginx-deployment-6794896487-2rnxq      Running
+10.0.1.133      default     cartservice-7685cbbd4b-wxbb9        Running
+10.0.112.225        default     checkoutservice-9b7dc8f59-rrpqn     Running
+10.0.1.41       default     currencyservice-56bf544587-kdmnr        Running
+10.0.111.182        default     efs-write-app       Running
+10.0.2.141      default     emailservice-6c8d4c548f-zfn5b       Running
+10.0.112.115        default     frontend-69d869947d-82jrq       Running
+10.0.111.120        default     loadgenerator-77c94f6f99-gvnk9      Running
+10.0.2.177      default     myapp1-9b7f4874f-g6gtb      Running
+10.0.1.19       default     myapp1-9b7f4874f-q7m95      Running
+10.0.2.90       default     paymentservice-6677674b85-s9xpz     Running
+10.0.2.226      default     productcatalogservice-57c8f7778c-ddv2h      Running
+10.0.111.237        default     recommendationservice-6569854945-xc7mc      Running
+10.0.112.67     default     redis-cart-8f764486f-qx8hk      Running
+10.0.111.146        default     shippingservice-76f6b7897c-ssfhr        Running
+10.0.1.177      interview       hello-world-de-7f7dd84f4-5vlc5      Running
+10.0.1.237      interview       hello-world-dee-787bf79bfb-snbvg        Running
+10.0.111.168        interview       hello-world-es-578f4f859c-dqp4w     Running
+10.0.1.190      interview       hello-world-eu-748db46546-f55sm     Running
+10.0.2.243      interview       hello-world-fr-7fbccc49f4-vg9sj     Running
+10.0.112.36     istio-system        grafana-749f67cb6f-4jclt        Running
+10.0.2.19       istio-system        istio-cni-node-7gmjg        Running
+10.0.111.32     istio-system        istio-cni-node-7l92z        Running
+10.0.112.106        istio-system        istio-cni-node-bczpg        Running
+10.0.1.88       istio-system        istio-cni-node-bhwjk        Running
+10.0.111.206        istio-system        istio-egressgateway-688d4797cd-csj48        Running
+10.0.111.166        istio-system        istio-ingressgateway-6bd9cfd8-vj9dc     Running
+10.0.111.165        istio-system        istiod-68fdb87f7-wcl7t      Running
+10.0.111.85     istio-system        kiali-5dd4b8584f-k64km      Running
+10.0.1.47       istio-system        prometheus-5f9557c5dc-bcwmr     Running
+10.0.2.131      istio-system        zipkin-5d8dc88bdc-l4l8d     Running
+10.0.1.254      kube-system     aws-node-bsfh5      Running
+10.0.2.176      kube-system     aws-node-jjl28      Running
+10.0.112.54     kube-system     aws-node-lq97k      Running
+10.0.111.178        kube-system     aws-node-vtddl      Running
+10.0.112.114        kube-system     coredns-79989457d9-9q6d8        Running
+10.0.112.175        kube-system     coredns-79989457d9-jtmlp        Running
+10.0.1.156      kube-system     ebs-csi-controller-69774c68f4-p6svn     Running
+10.0.2.188      kube-system     ebs-csi-controller-69774c68f4-t5dgt     Running
+10.0.2.73       kube-system     ebs-csi-node-4sxqh      Running
+10.0.1.17       kube-system     ebs-csi-node-f4cdz      Running
+10.0.111.130        kube-system     ebs-csi-node-krs4d      Running
+10.0.112.166        kube-system     ebs-csi-node-xn7zg      Running
+10.0.1.174      kube-system     efs-csi-controller-6d7b578777-kn9ml     Running
+10.0.2.86       kube-system     efs-csi-controller-6d7b578777-lp9g9     Running
+10.0.112.54     kube-system     efs-csi-node-gpp6t      Running
+10.0.1.254      kube-system     efs-csi-node-j5bbh      Running
+10.0.111.178        kube-system     efs-csi-node-jhrpr      Running
+10.0.2.176      kube-system     efs-csi-node-wgn9c      Running
+10.0.112.54     kube-system     kube-proxy-hs7cm        Running
+10.0.1.254      kube-system     kube-proxy-plcp7        Running
+10.0.2.176      kube-system     kube-proxy-r2xrr        Running
+10.0.111.178        kube-system     kube-proxy-r64wh        Running
+10.0.1.240      kube-system     radio-dev-ca-aws-cluster-autoscaler-68b99987b8-6vzcc        Running
+10.0.2.147      kube-system     radio-dev-metrics-server-54666cdb8c-x4qgq       Running
+10.0.2.138      kube-system     tiller-deploy-6679847b75-4nrkw      Pending
+10.0.1.122      nginx-ingress-controller        nginx-ingress-controller-ingress-nginx-controller-f6fd8fbb82lz9     Running
+
+[Container] 2023/01/02 17:24:56 Phase complete: PRE_BUILD State: SUCCEEDED
+[Container] 2023/01/02 17:24:56 Phase context status code:  Message: 
+[Container] 2023/01/02 17:24:56 Entering phase BUILD
+[Container] 2023/01/02 17:24:56 Running command docker login --username yousefshaban --password ${password}
+WARNING! Using --password via the CLI is insecure. Use --password-stdin.
+WARNING! Your password will be stored unencrypted in /root/.docker/config.json.
+Configure a credential helper to remove this warning. See
+https://docs.docker.com/engine/reference/commandline/login/#credentials-store
+
+Login Succeeded
+
+[Container] 2023/01/02 17:24:56 Running command echo Build started on `date`
+Build started on Mon Jan 2 17:24:56 UTC 2023
+
+[Container] 2023/01/02 17:24:56 Running command echo Building the Docker image...
+Building the Docker image...
+
+[Container] 2023/01/02 17:24:56 Running command docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG python_app_Pipeline/Dockerfile_py_Pipeline
+Sending build context to Docker daemon  22.02kB
+
+Step 1/5 : FROM python:3.8
+3.8: Pulling from library/python
+32de3c850997: Pulling fs layer
+fa1d4c8d85a4: Pulling fs layer
+
+Step 5/5 : CMD ["python", "test.py"]
+ ---> Running in 914c8952648c
+Removing intermediate container 914c8952648c
+ ---> 476026435f89
+Successfully built 476026435f89
+Successfully tagged yousefshaban/my-python-app:latest
+
+[Container] 2023/01/02 17:25:21 Running command docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $IMAGE_REPO_NAME:$IMAGE_TAG
+
+[Container] 2023/01/02 17:25:21 Phase complete: BUILD State: SUCCEEDED
+[Container] 2023/01/02 17:25:21 Phase context status code:  Message: 
+[Container] 2023/01/02 17:25:21 Entering phase POST_BUILD
+[Container] 2023/01/02 17:25:21 Running command echo Build completed on `date`
+Build completed on Mon Jan 2 17:25:21 UTC 2023
+
+[Container] 2023/01/02 17:25:21 Running command echo Pushing the Docker image...
+Pushing the Docker image...
+
+[Container] 2023/01/02 17:25:21 Running command docker push $IMAGE_REPO_NAME:$IMAGE_TAG
+The push refers to repository [docker.io/yousefshaban/my-python-app]
+
+```
 
 
 
