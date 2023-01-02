@@ -986,10 +986,10 @@ IP                      namespace                       Pod name                
 
 ## AWS CodePipeline+CodeBuild using Terraform to make automation process for Python Task
 
-we use AWS CodePipeline to make automatically test,build and deploy python app (Cluster health check) as the follwoing steps:
+**we use AWS CodePipeline to make automatically test,build and deploy python app (Cluster health check) as the follwoing steps:**
 
 
-### Step 00: We define Terraform Settings and provider `c1-version.tf`
+#### Step 00: We define Terraform Settings and provider `c1-version.tf`
 
 ```
 terraform {
@@ -1021,7 +1021,282 @@ provider "aws" {
 
 ```
 
-### Step 02: We define Terraform Settings and provider
+#### Step 01: We define Github Source as Connection for Pipeline `c2-source.tf`
+
+
+```
+
+resource "aws_codestarconnections_connection" "github" {
+  name = "github-connection"
+  provider_type = "GitHub"
+  #provider_version = "2"
+  #host_arn = "arn:aws:codestar-connections:us-east-1:962490649366:connection/efs-1"
+ # host_arn = aws_codestar_connections_host.github.arn
+  #access_token_arn = "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:GITHUB_SECRET_NAME"
+ # access_token_arn = "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:GITHUB_SECRET_NAME"
+
+}
+
+
+
+```
+
+
+#### Step 02: We define IAM roles and Polices for AWS CodePipeline and CodeBuild `c3-iam-role-policy.tf`
+
+
+```
+
+```
+
+
+
+#### Step 03: We define AWS CodeBuild Projects for Pipeline `c4-build.tf`
+
+
+```
+# aws codebuild - First - python and auth with K8s  ************************************
+
+resource "aws_codebuild_project" "containerAppBuild" {
+  badge_enabled  = false
+  build_timeout  = 60
+  name           = "python_app"
+
+
+
+  queued_timeout = 480
+  service_role   = aws_iam_role.containerAppBuildProjectRole.arn
+  tags = {
+    Environment = var.env
+  }
+
+  artifacts {
+    encryption_disabled = false
+    # name                   = "container-app-code-${var.env}"
+    # override_artifact_name = false
+    packaging = "NONE"
+    type      = "CODEPIPELINE"
+  }
+
+
+
+  environment {
+    compute_type                = "BUILD_GENERAL1_SMALL"
+    image                       = "aws/codebuild/standard:6.0"
+    image_pull_credentials_type = "CODEBUILD"
+    privileged_mode             = true
+    type                        = "LINUX_CONTAINER"
+    environment_variable {
+              name  = "IMAGE_REPO_NAME"
+              type  = "PLAINTEXT"
+              value = "yousefshaban/my-python-app"
+    }
+
+    environment_variable {
+              name  = "IMAGE_TAG"
+              type  = "PLAINTEXT"
+              value = "latest"
+    }
+
+
+
+  }
+
+
+  logs_config {
+    cloudwatch_logs {
+      status = "ENABLED"
+    }
+
+    s3_logs {
+      encryption_disabled = false
+      status              = "DISABLED"
+    }
+  }
+
+# how we can dd more source for aws_codebuild_project
+
+  source {
+
+    buildspec  = "${file("buildspec_python.yml")}"
+    git_clone_depth     = 0
+    insecure_ssl        = false
+    report_build_status = false
+  #  type                = "CODEPIPELINE"
+    type                = "CODEPIPELINE"
+  }
+}
+
+
+
+```
+
+
+
+#### Step 04: We define AWS CodePipeline for all Stages of Source and Builds `c5-pipeline.tf`
+
+
+```
+resource "aws_s3_bucket" "cicd_bucket" {
+  bucket = "my-artifact-store-i"
+#  acl    = "private"
+}
+
+resource "aws_codepipeline" "node_app_pipeline" {
+  name     = "python-app-pipeline"
+  role_arn = aws_iam_role.apps_codepipeline_role.arn
+  tags = {
+    Environment = var.env
+  }
+  artifact_store {
+    location = aws_s3_bucket.cicd_bucket.bucket
+    type     = "S3"
+  }
+
+
+  stage {
+    name = "Source"
+
+    action {
+      category = "Source"
+      input_artifacts = []
+      name            = "Source"
+      output_artifacts = [
+        "SourceArtifact",
+      ]
+      #owner     = "ThirdParty"
+      owner     = "AWS"
+      provider  = "CodeStarSourceConnection"     
+      #provider  = "GitHub"
+      run_order = 1
+      version   = "1"   # ??? 1 or 2 
+      configuration = {
+        ConnectionArn    = aws_codestarconnections_connection.github.arn
+        FullRepositoryId = var.python_project_repository_name
+        BranchName       = var.python_project_repository_branch
+      }
+
+
+
+    }
+  }
+
+
+
+
+
+  stage {
+  
+    name = "Build-python"
+
+    action {
+       name = "Build-python"
+      category = "Build"
+         run_order = 2
+      # region ??
+      configuration = {
+        "EnvironmentVariables" = jsonencode(
+          [
+            {
+              name  = "environment"
+              type  = "PLAINTEXT"
+              value = var.env
+            },
+            {
+              name  = "AWS_DEFAULT_REGION"
+              type  = "PLAINTEXT"
+              value = var.aws_region
+            },
+            #   {
+            #   name  = "PASS" >>> you can add on parameter store and use it on Buildspec.yml
+            #   - password=$(aws ssm get-parameters --region us-east-1 --names PASS --with-decryption --query Parameters[0].Value)
+            # - password=`echo $password | sed -e 's/^"//' -e 's/"$//'`
+            #   type  = "PARAMETER_STORE"
+            #   value = "ACCOUNT_ID"
+  
+ 
+          ]
+        )
+        "ProjectName" = aws_codebuild_project.containerAppBuild.name
+      }
+      input_artifacts = [
+        "SourceArtifact",
+      ]
+     
+      output_artifacts = [
+        "BuildArtifact",
+      ]
+      owner     = "AWS"
+      provider  = "CodeBuild"
+   #   run_order = 1
+      version   = "1"
+    }
+  }
+
+
+
+```
+
+
+
+#### Step 05: We define Outputs `c6-outputs.tf`
+
+
+```
+output "code_build_project" {
+  value = aws_codebuild_project.containerAppBuild.arn
+}
+output "node_app_codepipeline_project" {
+  value = aws_codepipeline.node_app_pipeline.arn
+}
+
+
+
+```
+
+
+
+#### Step 06: We define Variables `c7-variables.tf`
+
+
+```
+
+variable "aws_region" {
+  description = "AWS region to launch servers."
+  default     = "us-east-1"
+}
+variable "env" {
+  description = "Targeted Depolyment environment"
+  default     = "dev"
+}
+variable "python_project_repository_name" {
+  description = "Nodejs Project Repository name to connect to"
+  default     = "yousefshaban00/pipeline01"
+}
+variable "python_project_repository_branch" {
+  description = "Nodejs Project Repository branch to connect to"
+  default     = "main"
+}
+
+
+variable "artifacts_bucket_name" {
+  description = "S3 Bucket for storing artifacts"
+  default     = "python-app"
+}
+
+
+```
+
+
+
+#### Outputs and Verify 
+
+
+
+
+
+
+
 
 
 
